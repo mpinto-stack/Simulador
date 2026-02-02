@@ -70,6 +70,10 @@ export function computeAll(){
     const rtv = need_verao <= budget_kwh;
     const rti = need_inv <= budget_kwh;
 
+    const op_km_n = eur_km_energia_net + eur_km_fixos_net;
+    const pc_capex = tco_km_net>0 ? (100*eur_km_capex_net/tco_km_net) : 0;
+    const pc_op = tco_km_net>0 ? (100*op_km_n/tco_km_net) : 0;
+
     rows.push({
       key: d.marca+'
 '+d.modelo,
@@ -77,7 +81,7 @@ export function computeAll(){
       marca:d.marca, modelo:d.modelo,
       precoApos_n:preco_ap_net, precoApos_g:preco_ap_gross,
       cap:d.cap, cons:d.cons,
-      eur100_n:100*eur_km_energia_net, eurCapex_n:eur_km_capex_net,
+      eur100_n:100*eur_km_energia_net, eurCapex_n:eur_km_capex_net, op_km_n:op_km_n, pc_capex:pc_capex, pc_op:pc_op,
       tco_km_n:tco_km_net, tco_mes_n:tco_mes_net,
       eur100_g:100*eur_km_energia_gross, eurCapex_g:eur_km_capex_gross,
       tco_km_g:tco_km_gross, tco_mes_g:tco_mes_gross,

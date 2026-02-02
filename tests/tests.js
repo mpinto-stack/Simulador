@@ -1,7 +1,4 @@
 
-// Testes simples (corre no browser via console):
-// 1) Depois de abrir app.html, corre: runTests()
-
 export function runTests(){
   const rows = window.__ROWS||[];
   console.assert(rows.length>0, 'Deve haver linhas calculadas');

@@ -20,7 +20,7 @@ export function planTrip(){
   const cons = d.cons*(1+penAE)*(1+penInv);
   const total_kwh = cons * dist;
 
-  // curva simples 10-50-80 em 2 patamares
+  // curva simples 10-50-80
   const cap = d.cap;
   const pdc = d.pdc||120;
   const usable = 0.70*cap;

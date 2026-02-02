@@ -1,5 +1,1 @@
-
-self.onmessage = (ev)=>{
-  // Stub: em versões futuras, correr Monte Carlo/cenários aqui.
-  self.postMessage({ok:true});
-};
+self.onmessage = (ev)=>{ self.postMessage({ok:true}); };

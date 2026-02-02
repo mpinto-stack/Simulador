@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EV – Comparador v8 (alpha)</title>
+  <title>EV – Comparador v8 (beta)</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <style>
     :root{--bg:#f6f7fb;--text:#0f172a;--muted:#5b6b88;--card:#fff;--line:#e6ebf4;--accent:#0ea5a5;--good:#16a34a;--warn:#f59e0b;--bad:#ef4444;--grid:#cbd5e1}
@@ -37,8 +37,8 @@
 <div class="wrap">
   <header class="row" style="justify-content:space-between;align-items:center">
     <div class="row">
-      <h1 style="margin:0">Comparador EV – v8 alpha</h1>
-      <span class="pill">motor modular · PWA</span>
+      <h1 style="margin:0">Comparador EV – v8 beta</h1>
+      <span class="pill">motor modular · PWA · Pareto</span>
     </div>
     <div class="row">
       <button class="btn ghost" id="btnExport">Export JSON</button>
@@ -127,6 +127,10 @@
           </select>
         </label>
       </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnPerfilPT">Aplicar Perfil PT 2026 Q1</button>
+        <span class="note">Aplica IVA=23%, catálogo inclui IVA, modo = Ambos; podes ajustar impostos específicos se necessário.</span>
+      </div>
     </div>
     <div class="panel">
       <h2>ICE/PHEV referência</h2>
@@ -195,6 +199,7 @@
             <option value="trip">Viagem</option>
             <option value="full">Detalhado</option>
           </select>
+          <label style="margin-left:8px"><input type="checkbox" id="togglePareto"> Apenas não dominados (Pareto)</label>
           <button class="btn" id="btnCalc">Recalcular</button>
         </div>
       </div>
@@ -268,6 +273,7 @@
   import { buildTable, buildKPIs } from './src/ui/table.js';
   import { buildCumul, buildCompare } from './src/ui/charts.js';
   import { buildRecs } from './src/ui/recs.js';
+  import { paretoFront } from './src/pareto.js';
 
   const q = (id)=>document.getElementById(id);
 
@@ -287,7 +293,9 @@
   }
 
   function compute(){
-    const rows = computeAll();
+    let rows = computeAll();
+    const paretoOn = q('togglePareto')?.checked;
+    if(paretoOn){ rows = paretoFront(rows, ['tco_km_n','t1080','aut_verao'], ['min','min','max']); }
     window.__ROWS = rows;
     buildTable(rows);
     buildKPIs(rows);
@@ -318,6 +326,7 @@
   q('btnPNG').addEventListener('click', ()=>{ window.__exportPNG && window.__exportPNG(); });
   q('cmpSel').addEventListener('change', ()=> buildCompare(window.__ROWS||[]));
   q('btnPlan').addEventListener('click', ()=> planTrip());
+  const tPareto = q('togglePareto'); if(tPareto){ tPareto.addEventListener('change', ()=> compute()); }
 
   // Energy sliders
   ['ivaPct','impElec','impFuel','resMode','sensEner','sensFuel','orcMensal','catBaseIncluiIVA','tblView']
@@ -357,6 +366,9 @@
   q('btnGuideEmpresa').addEventListener('click', ()=>{ q('resMode').value='net'; q('catBaseIncluiIVA').checked=true; compute(); P.saveAll();});
   q('btnGuideParticular').addEventListener('click', ()=>{ q('resMode').value='both'; q('catBaseIncluiIVA').checked=true; compute(); P.saveAll();});
 
+  // Perfil PT 2026 Q1
+  const btnPerfilPT = q('btnPerfilPT'); if(btnPerfilPT){ btnPerfilPT.addEventListener('click', ()=>{ q('ivaPct').value=23; q('catBaseIncluiIVA').checked=true; q('resMode').value='both'; compute(); P.saveAll(); }); }
+
   // Export/Import/Reset
   q('btnExport').addEventListener('click', ()=>{
     const payload = P.exportAll();
@@ -374,13 +386,8 @@
   q('btnReset').addEventListener('click', ()=>{ if(confirm('Repor tudo?')){ P.resetAll(); location.reload(); }});
 
   // Boot
-  P.applyTheme && P.applyTheme();
-  P.loadAll();
-  P.loadCatalogEdits();
-  P.applyCatalogEdits();
-  buildProps();
-  buildCatalog();
-  compute();
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+  P.loadAll(); P.loadCatalogEdits(); P.applyCatalogEdits(); buildProps(); buildCatalog(); compute();
 </script>
 </body>
 </html>

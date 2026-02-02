@@ -1,7 +1,8 @@
 {
   "name": "EV Comparador v8",
   "short_name": "EV v8",
-  "start_url": "/app.html",
+  "start_url": "./app.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f6f7fb",
   "theme_color": "#0ea5a5",
