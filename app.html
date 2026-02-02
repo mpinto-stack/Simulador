@@ -1,0 +1,386 @@
+
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EV – Comparador v8 (alpha)</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <style>
+    :root{--bg:#f6f7fb;--text:#0f172a;--muted:#5b6b88;--card:#fff;--line:#e6ebf4;--accent:#0ea5a5;--good:#16a34a;--warn:#f59e0b;--bad:#ef4444;--grid:#cbd5e1}
+    body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1240px;margin:0 auto;padding:18px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+    .btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:8px 12px;font-weight:700;cursor:pointer}
+    .ghost{background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+    .tab.active{background:linear-gradient(135deg,#0ea5a5,#22b5b5);color:#fff;border-color:transparent}
+    .tabcontent{display:none;margin-top:12px}
+    .tabcontent.active{display:block}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:10px}
+    th,td{border-bottom:1px solid var(--line);padding:9px 8px;text-align:right;vertical-align:middle}
+    th{position:sticky;top:0;background:#f8fafc;z-index:1}
+    td.l,th.l{text-align:left}
+    tr:hover td{background:#f0f4ff}
+    .sticky1{position:sticky;left:0;background:inherit;z-index:2}
+    .sticky2{position:sticky;left:160px;background:inherit;z-index:2}
+    svg{width:100%;height:320px;background:#fff;border:1px solid var(--line);border-radius:12px}
+    .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;min-width:220px}
+    .ok{color:var(--good);font-weight:700}.bad{color:var(--bad);font-weight:700}.warn{color:var(--warn);font-weight:700}
+    .pill{display:inline-block;padding:2px 10px;border-radius:999px;border:1px solid var(--line);background:#eef2ff;font-size:12px}
+    .note{font-size:.92em;color:var(--muted)}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="row" style="justify-content:space-between;align-items:center">
+    <div class="row">
+      <h1 style="margin:0">Comparador EV – v8 alpha</h1>
+      <span class="pill">motor modular · PWA</span>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="btnExport">Export JSON</button>
+      <input type="file" id="fileImport" style="display:none" accept=".json">
+      <button class="btn ghost" id="btnImport">Import JSON</button>
+      <button class="btn" id="btnReset">Reset</button>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="t_params">Parâmetros</div>
+    <div class="tab" data-tab="t_energy">Energia & IVA</div>
+    <div class="tab" data-tab="t_models">Modelos & Retoma</div>
+    <div class="tab" data-tab="t_results">Resultados</div>
+    <div class="tab" data-tab="t_compare">Comparador</div>
+    <div class="tab" data-tab="t_charts">Gráficos</div>
+    <div class="tab" data-tab="t_recs">Recomendações</div>
+  </div>
+
+  <div class="tabcontent active" id="t_params">
+    <div class="panel">
+      <h2>1) Parâmetros</h2>
+      <div class="row">
+        <label>Anos <input type="number" id="anos" value="10" min="1" step="1"></label>
+        <label>Km/ano <input type="number" id="kmAno" value="10000" min="1000" step="500"></label>
+        <label>Residual % <input type="number" id="residual" value="30" min="0" max="80" step="1"></label>
+        <label>Fixos/ano € s/IVA <input type="number" id="fixosAno" value="450" min="0" step="10"></label>
+        <label>Reserva % <input type="number" id="reserva" value="10" min="0" max="30" step="1"></label>
+        <label>RT ida (km) <input type="number" id="distKm" value="162" min="1" step="1"></label>
+      </div>
+      <div class="row">
+        <span class="pill">Perfis rápidos</span>
+        <button class="btn ghost" id="presetVerao">Verão</button>
+        <button class="btn ghost" id="presetInverno">Inverno</button>
+        <button class="btn ghost" id="presetViagem">Viagem</button>
+        <button class="btn ghost" id="presetEmpresa">Empresa</button>
+        <button class="btn ghost" id="presetParticular">Particular</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>2) Sensibilidade & Orçamento</h2>
+      <div class="row">
+        <label>Energia ±% <input type="range" id="sensEner" min="-50" max="50" value="0" step="1"></label>
+        <span class="note" id="sensEnerVal">0%</span>
+        <label>Combustível ±% <input type="range" id="sensFuel" min="-50" max="50" value="0" step="1"></label>
+        <span class="note" id="sensFuelVal">0%</span>
+        <label>Orçamento mensal € s/IVA <input type="number" id="orcMensal" value="300" min="0" step="10"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>3) Guia Empresa vs Particular</h2>
+      <div class="row">
+        <button class="btn" id="btnGuideEmpresa">Aplicar guia: Empresa</button>
+        <button class="btn" id="btnGuideParticular">Aplicar guia: Particular</button>
+        <span class="note">Aplica modo de resultados e conversão do catálogo.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabcontent" id="t_energy">
+    <div class="panel">
+      <h2>Energia (casa 2 períodos + DC)</h2>
+      <div class="row">
+        <label>Casa HP € s/IVA <input type="number" id="precoCasaHP" value="0.190" step="0.001"></label>
+        <label>Casa HC € s/IVA <input type="number" id="precoCasaHC" value="0.150" step="0.001"></label>
+        <label>Partilha HP % <input type="number" id="shareHP" value="60" step="1"></label>
+        <label>Perdas casa % <input type="number" id="perdasCasa" value="12" step="1"></label>
+        <label>DC € s/IVA <input type="number" id="precoDC" value="0.40" step="0.01"></label>
+        <label>Perdas DC % <input type="number" id="perdasDC" value="8" step="1"></label>
+        <label>Mix casa % <input type="number" id="mixCasa" value="95" step="1"></label>
+        <label>Mix DC % <input type="number" id="mixDC" value="5" step="1"></label>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>IVA e impostos</h2>
+      <div class="row">
+        <label>IVA % <input type="number" id="ivaPct" value="23" step="0.5"></label>
+        <label>Imp. eletricidade € /kWh <input type="number" id="impElec" value="0.000" step="0.001"></label>
+        <label>Imp. combustível € /l <input type="number" id="impFuel" value="0.000" step="0.01"></label>
+        <label>Modo
+          <select id="resMode">
+            <option value="net" selected>Somente s/IVA</option>
+            <option value="both">Ambos (c/IVA e s/IVA)</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>ICE/PHEV referência</h2>
+      <div class="row">
+        <label>Gasolina l/100 <input type="number" id="ice_l100" value="6.5" step="0.1"></label>
+        <label>€ gasolina s/IVA <input type="number" id="ice_eur_l" value="1.75" step="0.01"></label>
+        <label>PHEV km em EV % <input type="number" id="phev_ev_share" value="40" step="1"></label>
+        <label>PHEV batt kWh <input type="number" id="phev_batt" value="12" step="0.1"></label>
+        <label>PHEV EV km <input type="number" id="phev_ev_km" value="50" step="1"></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabcontent" id="t_models">
+    <div class="panel">
+      <h2>Catálogo base</h2>
+      <div class="row"><label><input type="checkbox" id="catBaseIncluiIVA" checked> Catálogo inclui IVA (converter para s/IVA)</label></div>
+      <div class="row">
+        <label>Modelo <select id="catalogSel"></select></label>
+        <label>Preço s/IVA <input type="number" id="catPreco" step="1"></label>
+        <label>WLTP km <input type="number" id="catWLTP" step="1"></label>
+        <label>Cap. kWh <input type="number" id="catCap" step="0.1"></label>
+        <label>Consumo kWh/km <input type="number" id="catCons" step="0.001"></label>
+        <label>Pot. média DC kW <input type="number" id="catPdc" step="1"></label>
+        <label>Mala L <input type="number" id="catMala" step="1"></label>
+        <button class="btn ghost" id="btnCatSave">Guardar modelo</button>
+        <button class="btn ghost" id="btnCatReset">Repor lista</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Retoma e propostas</h2>
+      <div class="row">
+        <label>Retoma € s/IVA <input type="number" id="retoma" value="0" step="100"></label>
+      </div>
+      <h3>Propostas por modelo (opcional)</h3>
+      <div id="props" class="row" style="flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Adicionar carro personalizado</h2>
+      <div class="row">
+        <input placeholder="Marca" id="cMarca">
+        <input placeholder="Modelo" id="cModelo">
+        <input placeholder="Preço s/IVA" id="cPreco" type="number">
+        <input placeholder="WLTP km" id="cWLTP" type="number">
+        <input placeholder="Cap kWh" id="cCap" type="number">
+        <input placeholder="Cons kWh/km" id="cCons" type="number">
+        <input placeholder="Mala L" id="cMala" type="number">
+        <input placeholder="PDC kW" id="cPdc" type="number" value="120">
+        <button class="btn" id="btnAdd">Adicionar</button>
+        <button class="btn ghost" id="btnClearCustom">Limpar personalizados</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabcontent" id="t_results">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2>Resultados (ordenados por TCO)</h2>
+        <div class="row">
+          <span class="pill">Vista:</span>
+          <select id="tblView">
+            <option value="ess">Essencial</option>
+            <option value="fin">Financeiro</option>
+            <option value="trip">Viagem</option>
+            <option value="full">Detalhado</option>
+          </select>
+          <button class="btn" id="btnCalc">Recalcular</button>
+        </div>
+      </div>
+      <div class="row" style="gap:6px;margin:6px 0">
+        <span class="pill" id="mixBadge">Mix energia: casa/DC</span>
+      </div>
+      <table id="tbl"><thead><tr id="theadRow"></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="row" id="kpis" style="gap:10px;flex-wrap:wrap"></div>
+  </div>
+
+  <div class="tabcontent" id="t_compare">
+    <div class="panel">
+      <h2>Comparador</h2>
+      <div class="row">
+        <label>Seleciona (max 3)
+          <select id="cmpSel" multiple size="8" style="height:160px;min-width:240px"></select>
+        </label>
+        <label>Métrica
+          <select id="cmpMetric">
+            <option value="tco_km_n">TCO € / km (s/IVA)</option>
+            <option value="tco_mes_n">TCO € / mês (s/IVA)</option>
+            <option value="eur100_n">Energia € / 100 (s/IVA)</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="cmpStack"> Barras empilhadas</label>
+        <div style="flex:1"></div>
+        <div>
+          <label>Planeador rápido:</label>
+          <div class="row">
+            <select id="tripModel"></select>
+            <input type="number" id="tripKm" value="500" step="1">
+            <input type="number" id="tripV" value="110" step="1">
+            <input type="number" id="penAE" value="20" step="1">
+            <input type="number" id="penInv" value="15" step="1">
+            <input type="number" id="reservaTrip" value="10" step="1">
+            <button class="btn" id="btnPlan">Calcular</button>
+          </div>
+          <div class="note" id="planOut"></div>
+        </div>
+      </div>
+      <svg id="chartCompare"></svg>
+    </div>
+  </div>
+
+  <div class="tabcontent" id="t_charts">
+    <div class="panel">
+      <h2>Gráfico temporal: custo acumulado</h2>
+      <div class="row" id="seriesToggles"></div>
+      <svg id="chartCumul"></svg>
+      <div class="row" style="gap:6px;margin-top:6px">
+        <button class="btn ghost" id="btnPNG">Export PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabcontent" id="t_recs">
+    <div class="panel">
+      <h2>Recomendações</h2>
+      <div class="row" id="recsGrid" style="gap:12px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import * as P from './src/params.js';
+  import { DATA, buildCatalog, fillCatalogFields, saveCatalogModel, resetCatalog, buildProps } from './src/data.js';
+  import { euroKwhEffPair, fuelPricePair } from './src/energy.js';
+  import { computeAll } from './src/engine.js';
+  import { planTrip } from './src/trip.js';
+  import { buildTable, buildKPIs } from './src/ui/table.js';
+  import { buildCumul, buildCompare } from './src/ui/charts.js';
+  import { buildRecs } from './src/ui/recs.js';
+
+  const q = (id)=>document.getElementById(id);
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelectorAll('.tabcontent').forEach(c=>c.classList.remove('active'));
+      const pane = document.getElementById(t.dataset.tab);
+      if (pane) pane.classList.add('active');
+    });
+  });
+
+  function updateBadges(){
+    q('mixBadge').textContent = `Mix energia: ${q('mixCasa').value}% casa / ${q('mixDC').value}% DC`;
+  }
+
+  function compute(){
+    const rows = computeAll();
+    window.__ROWS = rows;
+    buildTable(rows);
+    buildKPIs(rows);
+    buildCumul(rows);
+    buildCompare(rows);
+    buildLists(rows);
+    buildRecs(rows);
+    updateBadges();
+  }
+
+  function buildLists(rows){
+    const tripSel = q('tripModel');
+    const cmp = q('cmpSel');
+    if(tripSel){
+      tripSel.innerHTML = '';
+      rows.forEach(r=>{ const o=document.createElement('option'); o.value=r.key; o.textContent=r.name; tripSel.appendChild(o); });
+    }
+    if(cmp){
+      const prev=[...cmp.selectedOptions].map(o=>o.value);
+      cmp.innerHTML='';
+      rows.forEach(r=>{ const o=document.createElement('option'); o.value=r.key; o.textContent=r.name; cmp.appendChild(o); });
+      [...cmp.options].forEach(o=>{ if(prev.includes(o.value)) o.selected=true; });
+    }
+  }
+
+  // Eventos principais
+  q('btnCalc').addEventListener('click', ()=>{ compute(); P.saveAll(); });
+  q('btnPNG').addEventListener('click', ()=>{ window.__exportPNG && window.__exportPNG(); });
+  q('cmpSel').addEventListener('change', ()=> buildCompare(window.__ROWS||[]));
+  q('btnPlan').addEventListener('click', ()=> planTrip());
+
+  // Energy sliders
+  ['ivaPct','impElec','impFuel','resMode','sensEner','sensFuel','orcMensal','catBaseIncluiIVA','tblView']
+  .forEach(id=>{
+    const el=q(id); if(!el) return;
+    el.addEventListener('change', ()=>{ 
+      if(id==='sensEner') q('sensEnerVal').textContent=`${+q('sensEner').value||0}%`;
+      if(id==='sensFuel') q('sensFuelVal').textContent=`${+q('sensFuel').value||0}%`;
+      compute(); P.saveAll();
+    });
+    if(el.type==='range'){
+      el.addEventListener('input', ()=>{
+        if(id==='sensEner') q('sensEnerVal').textContent=`${+q('sensEner').value||0}%`;
+        if(id==='sensFuel') q('sensFuelVal').textContent=`${+q('sensFuel').value||0}%`;
+        compute();
+      })
+    }
+  });
+
+  // Catalog events
+  q('catalogSel').addEventListener('change', ()=> fillCatalogFields());
+  q('btnCatSave').addEventListener('click', ()=>{ saveCatalogModel(); compute(); P.saveAll(); });
+  q('btnCatReset').addEventListener('click', ()=>{ if(confirm('Repor lista?')){ P.resetCatalogEdits(); location.reload(); }});
+
+  // Custom cars
+  q('btnAdd').addEventListener('click', ()=>{ P.addCustom(); compute(); P.saveAll(); buildCatalog(); buildProps(); });
+  q('btnClearCustom').addEventListener('click', ()=>{ P.clearCustom(); buildProps(); compute(); P.saveAll(); buildCatalog(); });
+
+  // Presets
+  q('presetVerao').addEventListener('click', ()=>{ q('penAE').value=20; q('penInv').value=0; q('reserva').value=10; compute(); });
+  q('presetInverno').addEventListener('click', ()=>{ q('penAE').value=20; q('penInv').value=15; q('reserva').value=10; compute(); });
+  q('presetViagem').addEventListener('click', ()=>{ q('penAE').value=25; q('penInv').value=15; q('reserva').value=12; compute(); });
+  q('presetEmpresa').addEventListener('click', ()=>{ q('resMode').value='net'; compute(); });
+  q('presetParticular').addEventListener('click', ()=>{ q('resMode').value='both'; compute(); });
+
+  // Guia
+  q('btnGuideEmpresa').addEventListener('click', ()=>{ q('resMode').value='net'; q('catBaseIncluiIVA').checked=true; compute(); P.saveAll();});
+  q('btnGuideParticular').addEventListener('click', ()=>{ q('resMode').value='both'; q('catBaseIncluiIVA').checked=true; compute(); P.saveAll();});
+
+  // Export/Import/Reset
+  q('btnExport').addEventListener('click', ()=>{
+    const payload = P.exportAll();
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ev_state_v8.json'; a.click();
+  });
+  q('btnImport').addEventListener('click', ()=> q('fileImport').click());
+  q('fileImport').addEventListener('change', ev=>{
+    if(ev.target.files && ev.target.files[0]){
+      const r=new FileReader();
+      r.onload=()=>{ try{ const s=JSON.parse(r.result||'{}'); P.importAll(s); buildProps(); compute(); alert('Import concluído.'); } catch(e){ alert('Ficheiro inválido.'); } };
+      r.readAsText(ev.target.files[0]);
+    }
+  });
+  q('btnReset').addEventListener('click', ()=>{ if(confirm('Repor tudo?')){ P.resetAll(); location.reload(); }});
+
+  // Boot
+  P.applyTheme && P.applyTheme();
+  P.loadAll();
+  P.loadCatalogEdits();
+  P.applyCatalogEdits();
+  buildProps();
+  buildCatalog();
+  compute();
+</script>
+</body>
+</html>
